@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тренажёр Криса: части слова</title>
+<style>
+:root{
+  --navy:#26408B; --navy2:#1B2F6B; --green:#1FC98A; --green-d:#13A26E; --green-l:#E3F8EF;
+  --red:#E8173D; --red-l:#FDE8EC; --sky:#E6F4FB; --sky2:#BFE3F5; --yellow:#FFD53D; --yellow-l:#FFF6D1;
+  --pink-l:#FDE6EE; --white:#fff; --shadow:0 4px 0 rgba(38,64,139,.12), 0 8px 24px rgba(38,64,139,.10);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{font-family:"Nunito","Segoe UI","Trebuchet MS",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  background:var(--green);color:var(--navy);min-height:100vh;font-size:20px;line-height:1.3}
+.app{max-width:820px;margin:0 auto;padding:12px 12px 28px;min-height:100vh;display:flex;flex-direction:column}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;color:#fff;font-weight:800;padding:4px 4px 10px}
+.top .stop{flex:1 1 auto;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.45)}
+.dot.done{background:#fff}.dot.cur{background:var(--yellow);box-shadow:0 0 0 3px rgba(255,255,255,.6)}
+.card{background:#fff;border-radius:28px;box-shadow:var(--shadow);padding:22px 18px 22px;flex:1;display:flex;flex-direction:column}
+h1{font-size:30px;margin:4px 0 8px;text-align:center;color:var(--navy)}
+h2{font-size:24px;margin:0 0 14px;text-align:center}
+.instr{font-size:22px;font-weight:800;text-align:center;margin:2px 0 16px;color:var(--navy)}
+.word{font-size:36px;font-weight:900;text-align:center;margin:6px 0 18px;letter-spacing:.5px}
+.sentence{font-size:28px;font-weight:800;text-align:center;margin:6px 0 18px}
+.gap{display:inline-block;min-width:80px;border-bottom:4px solid var(--navy);color:var(--green-d);padding:0 6px}
+.opts{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.btn{font:inherit;font-weight:800;font-size:24px;min-height:60px;min-width:60px;padding:10px 22px;border-radius:18px;
+  border:3px solid var(--sky2);background:#fff;color:var(--navy);cursor:pointer;box-shadow:0 4px 0 var(--sky2);
+  transition:transform .08s, background .2s;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--sky2)}
+.btn.ok{background:var(--green-l);border-color:var(--green);box-shadow:0 4px 0 var(--green);color:var(--green-d)}
+.btn.bad{background:var(--red-l);border-color:var(--red);box-shadow:0 4px 0 var(--red);color:var(--red);animation:shake .35s}
+.btn.big{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:0 5px 0 var(--navy2);font-size:24px;padding:12px 34px}
+.btn.yellow{background:var(--yellow);border-color:#E8B800;box-shadow:0 5px 0 #D4A800;color:var(--navy2)}
+.btn.wide{width:100%;max-width:520px}
+.btn[disabled]{opacity:.55;cursor:default}
+.col{display:flex;flex-direction:column;gap:12px;align-items:center}
+.col .btn{width:100%;max-width:560px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+/* feedback */
+.fb{display:flex;align-items:flex-end;gap:10px;margin-top:auto;padding-top:16px;min-height:130px}
+.fb img{width:96px;height:auto;flex:0 0 auto}
+.bubble{flex:1;background:var(--sky);border-radius:20px;padding:12px 16px;font-weight:700;font-size:20px;position:relative;margin-bottom:14px}
+.bubble:before{content:"";position:absolute;left:-12px;bottom:18px;border:8px solid transparent;border-right:12px solid var(--sky)}
+.bubble.ok{background:var(--green-l)}.bubble.ok:before{border-right-color:var(--green-l)}
+.bubble.hint{background:var(--yellow-l)}.bubble.hint:before{border-right-color:var(--yellow-l)}
+.next{display:flex;justify-content:center;margin-top:14px}
+/* morphemes */
+.m{position:relative;display:inline-block}
+.m-pref{border-top:4px solid currentColor;border-right:4px solid currentColor;padding:2px 2px 0 0;margin-right:3px}
+.m-end{border:4px solid currentColor;padding:0 3px;margin-left:2px;line-height:1.05}
+.m-zero{display:inline-block;width:.6em;height:1em;border:4px solid currentColor;margin-left:3px;vertical-align:-.12em}
+.hl{color:var(--red)}
+/* sort */
+.pool{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;min-height:66px;margin-bottom:16px}
+.chip{font:inherit;font-weight:800;font-size:22px;min-height:58px;padding:10px 18px;border-radius:16px;background:#fff;
+  border:3px solid var(--navy);color:var(--navy);touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;box-shadow:0 4px 0 rgba(38,64,139,.25)}
+.chip.sel{background:var(--yellow);border-color:#D4A800}
+.chip.placed{border-color:var(--green);color:var(--green-d);background:var(--green-l);cursor:default;box-shadow:none}
+.chip.bad{animation:shake .35s;border-color:var(--red);background:var(--red-l)}
+.ghost{position:fixed;z-index:50;pointer-events:none;opacity:.9;transform:translate(-50%,-50%) scale(1.06)}
+.baskets{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.basket{border:3px dashed var(--navy);border-radius:20px;background:var(--sky);min-height:170px;padding:10px;display:flex;flex-direction:column;gap:8px;align-items:center;cursor:pointer}
+.basket .lbl{font-weight:900;font-size:19px;text-align:center;color:var(--red);min-height:48px;display:flex;align-items:center}
+.basket.over,.slot.over,.match-r.over{background:var(--yellow-l);border-color:#D4A800}
+.basket .chip{font-size:19px;min-height:48px;padding:6px 12px}
+/* order */
+.slots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+.slot{width:96px;min-height:96px;border:3px dashed var(--navy);border-radius:18px;background:var(--sky);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px;cursor:pointer}
+.slot .n{font-size:16px;font-weight:900;color:var(--navy);opacity:.7}
+.slot .chip{font-size:20px;min-height:48px;padding:6px 10px}
+/* match */
+.match{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+.match-l,.match-r{min-height:70px;display:flex;align-items:center;justify-content:center}
+.match-r{border:3px solid var(--sky2);border-radius:18px;background:#fff;cursor:pointer;padding:6px}
+.match-r.done{border-color:var(--green);background:var(--green-l)}
+.match-l .chip{width:100%}
+svg.sch{height:46px;width:auto}
+.tag{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-size:16px;font-weight:900;margin-left:6px}
+/* screens */
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.hero img{width:200px;max-width:55vw;height:auto;animation:pop .4s}
+.hero p{font-size:21px;font-weight:700;margin:4px 0}
+.stars{display:flex;gap:8px;justify-content:center;margin:6px 0}
+.stars svg{width:62px;height:62px}
+.map{display:flex;flex-direction:column;gap:8px;width:100%;max-width:520px;margin:6px auto}
+.map div{background:var(--sky);border-radius:14px;padding:10px 14px;font-weight:800;text-align:left;font-size:19px}
+.map div.done{background:var(--green-l);color:var(--green-d)}
+.shot{background:var(--yellow-l);border:3px dashed #D4A800;border-radius:18px;padding:12px 14px;font-weight:900;font-size:21px}
+.small{font-size:17px;opacity:.8}
+@media (max-width:520px){
+  body{font-size:18px}
+  .card{padding:18px 12px;border-radius:22px}
+  .instr{font-size:20px}.word{font-size:30px}.sentence{font-size:24px}
+  .btn{font-size:21px;padding:10px 16px}
+  .chip{font-size:19px;padding:8px 12px}
+  .baskets{gap:8px}.basket .lbl{font-size:16px}.basket .chip{font-size:16px;padding:6px 8px}
+  .slot{width:64px;min-height:86px}.slots{gap:6px}.top .stop{flex-basis:100%}.slot .chip{font-size:17px;padding:6px 6px}
+  .fb img{width:78px}.bubble{font-size:18px}
+  svg.sch{height:36px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><div class="stop" id="topStop">Тренажёр Криса</div><div class="dots" id="dots"></div></div>
+  <div class="card" id="card"></div>
+</div>
+<script>
+"use strict";
+// ---------- Схемы частей слова (SVG) ----------
+function sch(parts){ // parts: строка из P R S E Z (Z — нулевое окончание = пустой квадрат)
+  var x=4, out=[], st='stroke="#26408B" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+  parts.split('').forEach(function(p){
+    if(p==='P'){out.push('<path d="M'+x+' 12 H'+(x+40)+' V34" '+st+'/>');x+=52;}
+    if(p==='R'){out.push('<path d="M'+x+' 40 A24 24 0 0 1 '+(x+48)+' 40" '+st+'/>');x+=58;}
+    if(p==='S'){out.push('<path d="M'+x+' 40 L'+(x+22)+' 16 L'+(x+44)+' 40" '+st+'/>');x+=54;}
+    if(p==='E'||p==='Z'){out.push('<rect x="'+x+'" y="12" width="30" height="30" '+st+'/>');x+=40;}
+  });
+  return '<svg class="sch" viewBox="0 0 '+(x)+' 48" aria-hidden="true">'+out.join('')+'</svg>';
+}
+// ---------- Задания ----------
+var HINT={
+  root:'Однокоренные слова имеют общий корень и близки по смыслу.',
+  form:'Формы одного слова — это одно слово, меняется только окончание.',
+  end:'Чтобы найти окончание, измени форму слова.',
+  zero:'Дом — дома: окончание пустое, нулевое. А неизменяемые слова не меняются, у них нет окончания.',
+  suf:'Суффикс стоит после корня и помогает образовать новое слово.',
+  pref:'Приставка стоит перед корнем и помогает образовать новое слово.',
+  order:'Порядок частей: приставка, корень, суффикс, окончание.'
+};
+var STOPS=[
+ {name:'Лесная тропинка', theme:'Корень', intro:'Первая остановка — Лесная тропинка. Здесь живут корни!',
+  tasks:[
+   {id:1,type:'choice',instr:'Выбери однокоренное слово.',word:'сад',options:['садовник','салют','самолёт'],answer:'садовник',hint:HINT.root},
+   {id:2,type:'sort',instr:'Разложи слова по корзинкам.',baskets:['Однокоренные к слову ЛЕС','Не однокоренные'],
+    items:[['лесник',0],['лесной',0],['перелесок',0],['лестница',1],['лесенка',1]],hint:HINT.root},
+   {id:3,type:'insert',instr:'Вставь общий корень во все слова.',lines:['___ак','___ный','___ка'],options:['рыб','мир','сад'],answer:'рыб',hint:'Найди корень, который подходит ко всем трём словам сразу.'},
+   {id:4,type:'tf',instr:'Верно или неверно?',text:'Кот, кота, котом — это формы одного слова.',answer:true,hint:HINT.form}
+  ]},
+ {name:'Речка Окончаний', theme:'Окончание', intro:'Вторая остановка — Речка Окончаний. Окончания здесь плавают и меняются!',
+  tasks:[
+   {id:5,type:'choice',instr:'Как Крису найти окончание в слове ЛУНА?',options:['Изменить форму: луна — луны — луной','Подобрать: луна — лунный — подлунный','Поставить в слове ударение'],answer:'Изменить форму: луна — луны — луной',hint:HINT.end,col:true},
+   {id:6,type:'error',instr:'Нажми на слово, где окончание выделено с ошибкой.',
+    items:[{h:'стол<span class="m-zero"></span>',bad:false},{h:'рек<span class="m-end">а</span>',bad:false},{h:'сло<span class="m-end">во</span>',bad:true},{h:'окн<span class="m-end">о</span>',bad:false}],
+    hint:'Измени слово: слово — слова. Меняется только последняя буква.'},
+   {id:7,type:'sort',instr:'Разложи слова по корзинкам.',baskets:['Нулевое окончание','Неизменяемые слова'],
+    items:[['дом',0],['сыр',0],['слон',0],['пальто',1],['метро',1],['кофе',1]],hint:HINT.zero},
+   {id:8,type:'choice',instr:'Выбери окончание в слове.',word:'зелёная',options:['-ая','-я','-ная'],answer:'-ая',hint:'Измени слово: зелёная — зелёный. Окончание — изменяемая часть.'}
+  ]},
+ {name:'Гора Суффиксов', theme:'Суффикс', intro:'Третья остановка — Гора Суффиксов. Суффиксы живут после корня!',
+  tasks:[
+   {id:9,type:'insert',instr:'Маленький дом — это…',lines:['дом___'],options:['ик','ник','ец'],answer:'ик',hint:'Вспомни: стол — столик, кот — котик. Суффикс помогает назвать что-то маленькое.'},
+   {id:10,type:'tf',instr:'Верно или неверно?',text:'Суффикс стоит перед корнем.',answer:false,hint:HINT.suf},
+   {id:11,type:'order',instr:'Собери слово из частей по порядку.',parts:['по','друж','к','а'],hint:HINT.order}
+  ]},
+ {name:'Замок Приставок', theme:'Приставка', intro:'Последняя остановка — Замок Приставок. Приставки стоят у самых ворот, перед корнем!',
+  tasks:[
+   {id:12,type:'choice',instr:'Выбери слово с подходящей приставкой.',sentence:'Кот <span class="gap">?</span> на дерево.',options:['залез','слез','вылез'],answer:'залез',hint:'Приставка меняет смысл слова: слез — вниз, вылез — наружу. А кот лез вверх.'},
+   {id:13,type:'error',instr:'Нажми на слово, где приставка выделена с ошибкой.',
+    items:[{h:'<span class="m-pref">по</span>бежал',bad:false},{h:'<span class="m-pref">при</span>летел',bad:false},{h:'<span class="m-pref">ма</span>шина',bad:true},{h:'<span class="m-pref">за</span>шёл',bad:false}],
+    hint:'Приставку можно убрать — останется слово: бежал, летел, шёл. А «шина» — совсем другое слово!'},
+   {id:14,type:'sort',instr:'Разложи слова по корзинкам.',baskets:['Есть приставка','Нет приставки'],
+    items:[['переход',0],['подарок',0],['улетел',0],['поле',1],['радость',1],['пенал',1]],hint:HINT.pref},
+   {id:15,type:'match',instr:'Соедини слово и его схему.',
+    pairs:[['рыбка','RSE'],['приход','PRZ'],['сад','RZ'],['кино','R']],hint:'Найди в слове приставку, корень, суффикс и окончание. У слова «кино» окончания нет.'}
+  ]}
+];
+var ALL=[];STOPS.forEach(function(s,si){s.tasks.forEach(function(t){t.stop=si;ALL.push(t);});});
+var TOTAL=ALL.length;
+var IMG={happy:'img/happy.png',praise:'img/praise.png',think:'img/think.png',cheer:'img/cheer.png',wave:'img/wave.png'};
+var PRAISE=['Молодец!','Верно! Так держать!','Отлично!','Ура, правильно!','Умница!','Здорово!'];
+// ---------- Состояние ----------
+var KEY='kris-sostav-slova-v1';
+var S=load()||fresh();
+function fresh(){return {phase:'start',stop:0,task:0,first:{},review:[],ri:0};}
+function load(){try{var v=localStorage.getItem(KEY);return v?JSON.parse(v):null;}catch(e){return null;}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function rnd(a){return a[Math.floor(Math.random()*a.length)];}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var card=document.getElementById('card');
+function $(sel,root){return (root||card).querySelector(sel);}
+function $$(sel,root){return Array.prototype.slice.call((root||card).querySelectorAll(sel));}
+
+function firstOK(){var n=0;ALL.forEach(function(t){if(S.first[t.id]===true)n++;});return n;}
+function starsCount(){var n=firstOK();return n>=13?3:(n>=9?2:1);}
+function starSVG(on){return '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="'+(on?'#FFD53D':'#E3E8F2')+'" stroke="'+(on?'#E0A800':'#C5CDDF')+'" stroke-width="1.4" stroke-linejoin="round"/></svg>';}
+
+function setTop(){
+  var t=document.getElementById('topStop'),d=document.getElementById('dots');
+  var cur=-1;
+  if(S.phase==='task'){cur=ALL.indexOf(STOPS[S.stop].tasks[S.task]);t.textContent='Остановка '+(S.stop+1)+' · '+STOPS[S.stop].name;}
+  else if(S.phase==='review'){t.textContent='Работа над ошибками · '+(S.ri+1)+' из '+S.review.length;}
+  else t.textContent='Тренажёр Криса';
+  var h='';ALL.forEach(function(x,i){h+='<span class="dot'+(S.first[x.id]!==undefined?' done':'')+(i===cur?' cur':'')+'"></span>';});
+  d.innerHTML=(S.phase==='review')?'':h;
+}
+function render(){
+  setTop();save();window.scrollTo(0,0);
+  if(S.phase==='start')return screenStart();
+  if(S.phase==='stopIntro')return screenStopIntro();
+  if(S.phase==='task')return renderTask(STOPS[S.stop].tasks[S.task],false);
+  if(S.phase==='stopDone')return screenStopDone();
+  if(S.phase==='results')return screenResults();
+  if(S.phase==='review')return renderTask(ALL.filter(function(t){return t.id===S.review[S.ri];})[0],true);
+  if(S.phase==='final')return screenFinal();
+}
+// ---------- Экраны ----------
+function screenStart(){
+  var resume=(S.stop>0||S.task>0);
+  card.innerHTML='<div class="hero"><img src="'+IMG.wave+'" alt="Крис машет"><h1>Привет! Я Крис!</h1>'+
+   '<p>Я отправляюсь в путешествие по Стране Слов. У меня 4 остановки: корень, окончание, суффикс и приставка.</p><p>Поможешь мне пройти все задания?</p>'+
+   '<div class="map">'+STOPS.map(function(s,i){return '<div>'+(i+1)+'. '+s.name+' — '+s.theme.toLowerCase()+'</div>';}).join('')+'</div>'+
+   '<button class="btn big wide" id="go">Поехали!</button></div>';
+  $('#go').onclick=function(){S.phase='stopIntro';render();};
+}
+function screenStopIntro(){
+  var s=STOPS[S.stop];
+  card.innerHTML='<div class="hero"><img src="'+IMG.wave+'" alt="Крис машет"><h1>Остановка '+(S.stop+1)+'</h1><h2>'+s.name+'</h2><p>'+s.intro+'</p>'+
+   '<button class="btn big wide" id="go">Начать</button></div>';
+  $('#go').onclick=function(){S.phase='task';S.task=0;render();};
+}
+function screenStopDone(){
+  var s=STOPS[S.stop], last=S.stop===STOPS.length-1;
+  card.innerHTML='<div class="hero"><img src="'+IMG.cheer+'" alt="Крис ликует"><h1>Ура! '+s.name+' пройдена!</h1>'+
+   '<p>'+(last?'Мы прошли все остановки! Посмотрим, что получилось?':'Ты отлично помогаешь мне! Едем дальше!')+'</p>'+
+   '<button class="btn big wide" id="go">'+(last?'Посмотреть итог':'Дальше в путь')+'</button></div>';
+  $('#go').onclick=function(){ if(last){S.phase='results';} else {S.stop++;S.task=0;S.phase='stopIntro';} render();};
+}
+function resultBlock(){
+  var n=firstOK(),st=starsCount(),h='<div class="stars">';
+  for(var i=0;i<3;i++)h+=starSVG(i<st);
+  return h+'</div><p>С первого раза верно: <b>'+n+' из '+TOTAL+'</b></p>';
+}
+function screenResults(){
+  var errs=ALL.filter(function(t){return S.first[t.id]===false;}).map(function(t){return t.id;});
+  if(!errs.length){S.phase='final';return render();}
+  card.innerHTML='<div class="hero"><img src="'+IMG.cheer+'" alt="Крис ликует"><h1>Путешествие пройдено!</h1>'+resultBlock()+
+   '<p>Давай ещё раз посмотрим задания, где были ошибки. Так ты станешь ещё сильнее!</p>'+
+   '<button class="btn big wide" id="go">Работа над ошибками</button></div>';
+  $('#go').onclick=function(){S.review=errs;S.ri=0;S.phase='review';render();};
+}
+function screenFinal(){
+  var fixed=S.review&&S.review.length;
+  card.innerHTML='<div class="hero"><img src="'+IMG.cheer+'" alt="Крис ликует"><h1>Ты настоящий знаток слов!</h1>'+resultBlock()+
+   (fixed?'<p>Работа над ошибками выполнена!</p>':'<p>Ни одной ошибки — вот это да!</p>')+
+   '<div class="shot">📸 Сделай скриншот и отправь учителю</div>'+
+   '<button class="btn yellow wide" id="again">Начать заново</button></div>';
+  $('#again').onclick=function(){S=fresh();render();};
+}
+// ---------- Задания ----------
+function fbHTML(){return '<div class="fb" id="fb"><img id="kimg" src="'+IMG.think+'" alt="Крис"><div class="bubble" id="kmsg">Я думаю вместе с тобой!</div></div><div class="next" id="next"></div>';}
+function renderTask(t,isReview){
+  var h='<div class="instr">'+t.instr+'</div>';
+  if(t.type==='choice'){
+    if(t.word)h+='<div class="word">'+t.word+'</div>';
+    if(t.sentence)h+='<div class="sentence">'+t.sentence+'</div>';
+    h+='<div class="'+(t.col?'col':'opts')+'">'+shuffle(t.options).map(function(o){return '<button class="btn" data-v="'+esc(o)+'">'+esc(o)+'</button>';}).join('')+'</div>';
+  } else if(t.type==='tf'){
+    h+='<div class="sentence">'+t.text+'</div><div class="opts"><button class="btn" data-v="1">Верно</button><button class="btn" data-v="0">Неверно</button></div>';
+  } else if(t.type==='insert'){
+    h+='<div class="word" id="ins">'+t.lines.map(function(l){return '<div>'+l.replace('___','<span class="gap">&nbsp;?&nbsp;</span>')+'</div>';}).join('')+'</div>';
+    h+='<div class="opts">'+shuffle(t.options).map(function(o){return '<button class="btn" data-v="'+esc(o)+'">'+esc(o)+'</button>';}).join('')+'</div>';
+  } else if(t.type==='error'){
+    h+='<div class="col">'+shuffle(t.items).map(function(it){return '<button class="btn" style="font-size:30px" data-bad="'+(it.bad?1:0)+'">'+it.h+'</button>';}).join('')+'</div>';
+  } else if(t.type==='sort'){
+    h+='<div class="pool" id="pool">'+shuffle(t.items).map(function(it){return '<button class="chip" data-b="'+it[1]+'">'+it[0]+'</button>';}).join('')+'</div>';
+    h+='<div class="baskets">'+t.baskets.map(function(b,i){return '<div class="basket" data-drop="'+i+'"><div class="lbl">'+b+'</div></div>';}).join('')+'</div>';
+  } else if(t.type==='order'){
+    h+='<div class="slots">'+t.parts.map(function(p,i){return '<div class="slot" data-drop="'+i+'"><span class="n">'+(i+1)+'</span></div>';}).join('')+'</div>';
+    h+='<div class="pool" id="pool">'+shuffle(t.parts.map(function(p,i){return [p,i];})).map(function(it){return '<button class="chip" data-i="'+it[1]+'">'+it[0]+'</button>';}).join('')+'</div>';
+  } else if(t.type==='match'){
+    var L=shuffle(t.pairs.map(function(p,i){return [p[0],i];})), R=shuffle(t.pairs.map(function(p,i){return [p[1],i];}));
+    h+='<div class="match">';
+    for(var k=0;k<L.length;k++){
+      h+='<div class="match-l"><button class="chip" data-i="'+L[k][1]+'">'+L[k][0]+'</button></div>';
+      h+='<div class="match-r" data-drop="'+R[k][1]+'">'+sch(R[k][0])+'</div>';
+    }
+    h+='</div><p class="small" style="text-align:center">Нажми на слово, а потом на схему. Или перетащи слово на схему.</p>';
+  }
+  card.innerHTML=h+fbHTML();
+  var ctx={t:t,review:isReview,missed:false,done:false};
+  ({choice:bindChoice,tf:bindChoice,insert:bindChoice,error:bindError,sort:bindSort,order:bindOrder,match:bindMatch})[t.type](ctx);
+}
+function say(kind,text){
+  var img=$('#kimg'),m=$('#kmsg');
+  img.src=kind==='ok'?(Math.random()<.5?IMG.happy:IMG.praise):IMG.think;
+  m.className='bubble '+(kind==='ok'?'ok':'hint');
+  m.innerHTML=text;
+}
+function wrong(ctx){ctx.missed=true;say('hint','Подумай ещё! '+ctx.t.hint);}
+function success(ctx){
+  if(ctx.done)return;ctx.done=true;
+  if(!ctx.review && S.first[ctx.t.id]===undefined){S.first[ctx.t.id]=!ctx.missed;save();setTop();}
+  say('ok',rnd(PRAISE));
+  $('#next').innerHTML='<button class="btn big wide" id="nx">Дальше →</button>';
+  var nx=$('#nx');nx.onclick=goNext;nx.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function goNext(){
+  if(S.phase==='review'){ if(S.ri<S.review.length-1){S.ri++;} else {S.phase='final';} return render(); }
+  if(S.task<STOPS[S.stop].tasks.length-1){S.task++;} else {S.phase='stopDone';}
+  render();
+}
+function bindChoice(ctx){
+  var t=ctx.t;
+  $$('.opts .btn, .col .btn').forEach(function(b){b.onclick=function(){
+    if(ctx.done||b.classList.contains('bad'))return;
+    var v=b.getAttribute('data-v'),ok;
+    if(t.type==='tf')ok=(v==='1')===t.answer; else ok=v===t.answer;
+    if(ok){b.classList.add('ok');
+      if(t.type==='insert'){$$('#ins .gap').forEach(function(g){g.textContent=t.answer;});}
+      if(t.type==='choice'&&t.sentence){var g=$('.sentence .gap');if(g)g.textContent=t.answer;}
+      $$('.btn').forEach(function(x){if(x!==b)x.disabled=true;});success(ctx);}
+    else{b.classList.add('bad');wrong(ctx);}
+  };});
+}
+function bindError(ctx){
+  $$('.col .btn').forEach(function(b){b.onclick=function(){
+    if(ctx.done)return;
+    if(b.getAttribute('data-bad')==='1'){b.classList.add('ok');$$('.col .btn').forEach(function(x){if(x!==b)x.disabled=true;});success(ctx);}
+    else{b.classList.remove('bad');void b.offsetWidth;b.classList.add('bad');wrong(ctx);}
+  };});
+}
+// ---------- Перетаскивание + «нажми, потом выбери» ----------
+var selected=null;
+function select(chip){ $$('.chip.sel').forEach(function(c){c.classList.remove('sel');}); selected=chip; if(chip)chip.classList.add('sel'); }
+function makeDrag(chip,onDrop){
+  var sx,sy,drag=false,ghost=null,pid=null,lastOver=null;
+  chip.addEventListener('pointerdown',function(e){
+    if(chip.disabled||chip.classList.contains('placed'))return;
+    pid=e.pointerId;sx=e.clientX;sy=e.clientY;drag=false;
+    try{chip.setPointerCapture(pid);}catch(_){}
+  });
+  chip.addEventListener('pointermove',function(e){
+    if(pid!==e.pointerId)return;
+    if(!drag&&Math.hypot(e.clientX-sx,e.clientY-sy)>8){
+      drag=true;ghost=chip.cloneNode(true);ghost.classList.add('ghost');document.body.appendChild(ghost);chip.style.opacity='.35';
+    }
+    if(drag){ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+      var over=dropAt(e.clientX,e.clientY);if(lastOver&&lastOver!==over)lastOver.classList.remove('over');if(over)over.classList.add('over');lastOver=over;}
+  });
+  function end(e){
+    if(pid!==e.pointerId)return;pid=null;
+    if(lastOver){lastOver.classList.remove('over');lastOver=null;}
+    if(drag){var tgt=dropAt(e.clientX,e.clientY);ghost.remove();ghost=null;chip.style.opacity='';drag=false;chip.dataset.dragged='1';setTimeout(function(){chip.dataset.dragged='';},80);select(null);if(tgt&&e.type==='pointerup')onDrop(chip,tgt);}
+    else if(e.type==='pointerup'){ select(selected===chip?null:chip); }
+  }
+  chip.addEventListener('pointerup',end);chip.addEventListener('pointercancel',end);
+}
+function dropAt(x,y){var el=document.elementFromPoint(x,y);return el?el.closest('[data-drop]'):null;}
+function bindTargets(onDrop){
+  $$('[data-drop]').forEach(function(tg){tg.addEventListener('click',function(){ if(selected){var c=selected;select(null);onDrop(c,tg);} });});
+}
+function bindSort(ctx){
+  selected=null;
+  var left=$$('#pool .chip').length;
+  function drop(chip,tg){
+    if(ctx.done||chip.classList.contains('placed'))return;
+    if(chip.getAttribute('data-b')===tg.getAttribute('data-drop')){
+      chip.classList.remove('bad','sel');chip.classList.add('placed');tg.appendChild(chip);left--;
+      if(left===0)success(ctx); else say('ok','Верно! Продолжай.');
+    } else {chip.classList.remove('bad');void chip.offsetWidth;chip.classList.add('bad');wrong(ctx);}
+  }
+  $$('#pool .chip').forEach(function(c){makeDrag(c,drop);});
+  bindTargets(drop);
+}
+function bindOrder(ctx){
+  selected=null;var t=ctx.t,pool=$('#pool');
+  function place(chip,slot){
+    if(ctx.done)return;
+    if(slot.querySelector('.chip'))pool.appendChild(slot.querySelector('.chip'));
+    slot.appendChild(chip);check();
+  }
+  function check(){
+    var slots=$$('.slot'),full=slots.every(function(s){return s.querySelector('.chip');});
+    if(!full)return;
+    var ok=slots.every(function(s,i){return s.querySelector('.chip').getAttribute('data-i')===String(i);});
+    if(ok){slots.forEach(function(s){s.querySelector('.chip').classList.add('placed');});success(ctx);}
+    else{wrong(ctx);setTimeout(function(){slots.forEach(function(s){var c=s.querySelector('.chip');if(c){c.classList.remove('sel');pool.appendChild(c);}});},900);}
+  }
+  $$('.chip').forEach(function(c){
+    makeDrag(c,function(chip,slot){place(chip,slot);});
+    c.addEventListener('click',function(){ // нажатие: в пул → в первое пустое место; из места → назад
+      if(ctx.done||c.dataset.dragged==='1')return;
+      if(c.parentNode.classList.contains('slot')){select(null);pool.appendChild(c);return;}
+      var empty=$$('.slot').filter(function(s){return !s.querySelector('.chip');})[0];
+      if(empty){select(null);place(c,empty);}
+    });
+  });
+  // нажатие на слот при выбранной плитке
+  $$('.slot').forEach(function(s){s.addEventListener('click',function(e){ if(selected&&e.target===s){var c=selected;select(null);place(c,s);} });});
+}
+function bindMatch(ctx){
+  selected=null;var left=ctx.t.pairs.length,num=0;
+  function drop(chip,tg){
+    if(ctx.done||chip.classList.contains('placed')||tg.classList.contains('done'))return;
+    if(chip.getAttribute('data-i')===tg.getAttribute('data-drop')){
+      num++;chip.classList.remove('bad','sel');chip.classList.add('placed');chip.innerHTML+=' <span class="tag">'+num+'</span>';
+      tg.classList.add('done');tg.insertAdjacentHTML('beforeend','<span class="tag">'+num+'</span>');
+      left--; if(left===0)success(ctx); else say('ok','Верно! Дальше.');
+    } else {chip.classList.remove('bad');void chip.offsetWidth;chip.classList.add('bad');wrong(ctx);}
+  }
+  $$('.match .chip').forEach(function(c){makeDrag(c,drop);});
+  bindTargets(drop);
+}
+render();
+</script>
+</body>
+</html>
